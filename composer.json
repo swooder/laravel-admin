@@ -1,14 +1,14 @@
 {
-    "name": "encore/laravel-admin",
+    "name": "woodfish/laravel-admin",
     "description": "laravel admin",
     "type": "library",
     "keywords": ["laravel", "admin", "grid", "chart", "form"],
-    "homepage": "https://github.com/z-song/laravel-admin",
+    "homepage": "https://github.com/swooder/laravel-admin",
     "license": "MIT",
     "authors": [
         {
-            "name": "zsong",
-            "email": "zosong@126.com"
+            "name": "shaojie",
+            "email": "shaojie519@gmail.com"
         }
     ],
     "require": {
@@ -19,7 +19,6 @@
     "require-dev": {
         "phpunit/phpunit": "~4.0",
         "laravel/laravel": "5.2.*",
-        "symfony/css-selector": "2.8.*|3.0.*",
         "symfony/dom-crawler": "2.8.*|3.0.*",
         "fzaninotto/faker": "~1.4"
     },
