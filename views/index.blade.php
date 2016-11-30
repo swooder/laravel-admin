@@ -40,7 +40,7 @@
     @include('admin::partials.header')
 
     @include('admin::partials.sidebar')
-
+    @include('UEditor::head');
     <div class="content-wrapper" id="pjax-container">
         @yield('content')
         {!! Admin::script() !!}
