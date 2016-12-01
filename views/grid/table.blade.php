@@ -1,3 +1,4 @@
+@include('UEditor::head');
 <div class="box">
     <div class="box-header">
         <h3 class="box-title"></h3>

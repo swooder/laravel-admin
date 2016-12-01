@@ -9,7 +9,7 @@
 
         {{--<textarea class="form-control" id="{{$id}}" name="{{$name}}" placeholder="{{ trans('admin::lang.input') }} {{$label}}" {!! $attributes !!} >{{ old($column, $value) }}</textarea>--}}
         <script id="container" id="{{$id}}" name="{{$name}}" type="text/plain">
-            {{$value}}
+            {!! $value !!}
         </script>
 
         <script type="text/javascript">
