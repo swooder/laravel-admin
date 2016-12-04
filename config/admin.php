@@ -41,6 +41,7 @@ return [
         'directory'  => [
             'image'  => 'image',
             'file'   => 'file',
+            'video'   => 'video',
         ],
 
         'host' => 'http://localhost:8000/upload/',
