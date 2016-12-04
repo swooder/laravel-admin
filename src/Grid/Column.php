@@ -307,6 +307,30 @@ EOT;
         return $this;
     }
 
+
+    /**
+     * Wrap value as a image.
+     *
+     * @param string $server
+     * @param int    $width
+     * @param int    $height
+     *
+     * @return $this
+     */
+    public function video($server = '', $width = 200, $height = 200)
+    {
+        $server = $server ?: config('admin.upload.host');
+
+        $callback = "<video controls=\"controls\" src='$server/{\$value}' style='max-width:{$width}px;max-height:{$height}px' class='img img-thumbnail' />";
+
+        $this->htmlCallback($callback);
+
+        return $this;
+    }
+
+
+
+
     /**
      * Make the column editable.
      *
