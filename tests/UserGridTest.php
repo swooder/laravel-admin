@@ -158,6 +158,19 @@ class UserGridTest extends TestCase
             ->seeInElement('td', $user->end_at);
     }
 
+    public function testValueCallback()
+    {
+        $this->seedsTable(1);
+
+        $user = UserModel::with('profile')->find(1);
+
+        $this->visit('admin/users')
+            ->seeInElement('th', 'Column1 not in table')
+            ->seeInElement('th', 'Column2 not in table')
+            ->seeInElement('td', "full name:{$user->profile->first_name} {$user->profile->last_name}")
+            ->seeInElement('td', "{$user->email}#{$user->profile->color}");
+    }
+
     public function testHasManyRelation()
     {
         factory(\Tests\Models\User::class, 10)
@@ -191,5 +204,26 @@ class UserGridTest extends TestCase
             ->seeInElement('td a[class*=btn]', 'detail');
 
         $this->assertCount(5, $this->crawler()->filter('td a[class*=btn]'));
+    }
+
+    public function testGridPerPage()
+    {
+        $this->seedsTable(98);
+
+        $this->visit('admin/users')
+            ->seeElement('select[class*=per-page][name=per-page]')
+            ->seeInElement('select option', 10)
+            ->seeInElement('select option[selected]', 20)
+            ->seeInElement('select option', 30)
+            ->seeInElement('select option', 50)
+            ->seeInElement('select option', 100);
+
+        $this->assertEquals('http://localhost:8000/admin/users?per_page=20', $this->crawler()->filter('select option[selected]')->attr('value'));
+
+        $perPage = rand(1, 98);
+
+        $this->visit('admin/users?per_page='.$perPage)
+            ->seeInElement('select option[selected]', $perPage)
+            ->assertCount($perPage + 1, $this->crawler()->filter('tr'));
     }
 }

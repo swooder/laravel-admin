@@ -1,4 +1,4 @@
-<div class="form-group {!! !$errors->has($label) ?: 'has-error' !!}">
+<div class="form-group {!! ($errors->has($column['start'].'start') || $errors->has($column['end'].'end')) ? 'has-error' : ''  !!}">
 
     <label for="{{$id['start']}}" class="col-sm-2 control-label">{{$label}}</label>
 
@@ -21,6 +21,8 @@
                 </div>
             </div>
         </div>
+
+        @include('admin::form.help-block')
 
     </div>
 </div>

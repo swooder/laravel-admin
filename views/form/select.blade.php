@@ -1,4 +1,4 @@
-<div class="form-group {!! !$errors->has($label) ?: 'has-error' !!}">
+<div class="form-group {!! !$errors->has($column) ?: 'has-error' !!}">
 
 <label for="{{$id}}" class="col-sm-2 control-label">{{$label}}</label>
 
@@ -11,5 +11,8 @@
                 <option value="{{$select}}" {{ $select == old($column, $value) ?'selected':'' }}>{{$option}}</option>
             @endforeach
         </select>
+
+        @include('admin::form.help-block')
+
     </div>
 </div>

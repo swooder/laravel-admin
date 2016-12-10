@@ -2,23 +2,29 @@
     <div class="box-header">
         <h3 class="box-title"></h3>
 
-        <div class="box-tools">
-
-            {!! $grid->renderFilter() !!}
-
-            @if($grid->allowExport())
-                <div class="btn-group pull-right" style="margin-right: 10px">
-                    <a href="/{{ $grid->exportUrl() }}" target="_blank" class="btn btn-sm btn-warning"><i class="fa fa-download"></i>&nbsp;&nbsp;{{ trans('admin::lang.export') }}</a>
-                </div>
-            @endif
-
-            @if($grid->allowCreation())
-                <div class="btn-group pull-right" style="margin-right: 10px">
-                    <a href="/{{$grid->resource()}}/create" class="btn btn-sm btn-success"><i class="fa fa-save"></i>&nbsp;&nbsp;{{ trans('admin::lang.new') }}</a>
-                </div>
-            @endif
-
+        @if($grid->usePagination() && $grid->usePerPageSelector())
+        <div class="input-group pull-left" style="width: 170px;">
+            <span class="input-group-addon"><small>{{ trans('admin::lang.show') }}</small></span>
+            <select class="form-control input-xs per-page" name="per-page">
+                {!! $grid->perPageOptions() !!}
+            </select>
+            <span class="input-group-addon"><small>{{ trans('admin::lang.items') }}</small></span>
         </div>
+        @endif
+
+        {!! $grid->renderFilter() !!}
+
+        @if($grid->allowExport())
+            <div class="btn-group pull-right" style="margin-right: 10px">
+                <a href="/{{ $grid->exportUrl() }}" target="_blank" class="btn btn-sm btn-warning"><i class="fa fa-download"></i>&nbsp;&nbsp;{{ trans('admin::lang.export') }}</a>
+            </div>
+        @endif
+
+        @if($grid->allowCreation())
+            <div class="btn-group pull-right" style="margin-right: 10px">
+                <a href="/{{$grid->resource()}}/create" class="btn btn-sm btn-success"><i class="fa fa-save"></i>&nbsp;&nbsp;{{ trans('admin::lang.new') }}</a>
+            </div>
+        @endif
     </div>
     <!-- /.box-header -->
 
@@ -30,7 +36,7 @@
                     <div class="mailbox-attachment-info">
                         <a href="#" class="mailbox-attachment-name" style="word-break:break-all;"><i class="fa fa-camera"></i>&nbsp;&nbsp;{!! isset($text_column) ? $row->column($text_column) : '' !!}</a>
                         <span class="mailbox-attachment-size">
-                          <input type="checkbox" class="grid-item" data-id="{{ $row->id() }}">
+                          <input type="checkbox" class="grid-item" data-id="{{ $row->id() }}" />
                             <span class="pull-right">
                             @if($grid->allowActions())
                                 {!! $row->actions() !!}
@@ -45,7 +51,7 @@
     </div>
 
     <div class="box-footer clearfix">
-        <input type="checkbox" class="grid-select-all">&nbsp;&nbsp;&nbsp;
+        <input type="checkbox" class="grid-select-all" />&nbsp;&nbsp;&nbsp;
         @if($grid->allowBatchDeletion())
             <a class="btn btn-sm btn-danger batch-delete">{{ trans('admin::lang.batch_delete') }}</a>
         @endif

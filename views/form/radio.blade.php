@@ -1,4 +1,4 @@
-<div class="form-group {!! !$errors->has($label) ?: 'has-error' !!}">
+<div class="form-group {!! !$errors->has($column) ?: 'has-error' !!}">
 
     <label for="{{$id}}" class="col-sm-2 control-label">{{$label}}</label>
 
@@ -9,5 +9,8 @@
         @foreach($values as $option => $label)
             <input type="radio" name="{{$name}}" value="{{$option}}" class="minimal {{$id}}" {{ ($option == old($column, $value))?'checked':'' }} />&nbsp;{{$label}}&nbsp;&nbsp;
         @endforeach
+
+        @include('admin::form.help-block')
+
     </div>
 </div>

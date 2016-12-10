@@ -130,6 +130,27 @@ class Grid
     protected $allowExport = true;
 
     /**
+     * If use grid filter.
+     *
+     * @var bool
+     */
+    protected $useFilter = true;
+
+    /**
+     * If grid use pagination.
+     *
+     * @var bool
+     */
+    protected $usePagination = true;
+
+    /**
+     * If grid use per-page selector.
+     *
+     * @var bool
+     */
+    protected $usePerPageSelector = true;
+
+    /**
      * Is grid rows orderable.
      *
      * @var bool
@@ -147,6 +168,20 @@ class Grid
      * @var string
      */
     protected $view = 'admin::grid.table';
+
+    /**
+     * Per-page options.
+     *
+     * @var array
+     */
+    protected $perPages = [10, 20, 30, 50, 100];
+
+    /**
+     * Default items count per-page.
+     *
+     * @var int
+     */
+    protected $perPage = 20;
 
     /**
      * Create a new grid instance.
@@ -281,8 +316,10 @@ class Grid
      *
      * @return void
      */
-    public function paginate($perPage = null)
+    public function paginate($perPage = 20)
     {
+        $this->perPage = $perPage;
+
         $this->model()->paginate($perPage);
     }
 
@@ -293,6 +330,10 @@ class Grid
      */
     public function paginator()
     {
+        if (!$this->usePagination) {
+            return '';
+        }
+
         $query = Input::all();
 
         return $this->model()->eloquent()->appends($query)->render('admin::pagination');
@@ -310,6 +351,8 @@ class Grid
         }
 
         $data = $this->processFilter();
+
+        Column::setOriginalGridData($data);
 
         $this->columns->map(function (Column $column) use (&$data) {
             $data = $column->fill($data);
@@ -422,18 +465,26 @@ class Grid
 
     /**
      * Disable batch deletion.
+     *
+     * @return $this
      */
     public function disableBatchDeletion()
     {
         $this->allowBatchDeletion = false;
+
+        return $this;
     }
 
     /**
      * Disable creation.
+     *
+     * @return $this
      */
     public function disableCreation()
     {
         $this->allowCreation = false;
+
+        return $this;
     }
 
     /**
@@ -458,10 +509,14 @@ class Grid
 
     /**
      * Disable all actions.
+     *
+     * @return $this
      */
     public function disableActions()
     {
         $this->allowActions = false;
+
+        return $this;
     }
 
     /**
@@ -476,10 +531,70 @@ class Grid
 
     /**
      * Disable export.
+     *
+     * @return $this
      */
     public function disableExport()
     {
         $this->allowExport = false;
+
+        return $this;
+    }
+
+    /**
+     * Disable grid filter.
+     *
+     * @return $this
+     */
+    public function disableFilter()
+    {
+        $this->useFilter = false;
+
+        return $this;
+    }
+
+    /**
+     * Disable grid pagination.
+     *
+     * @return $this
+     */
+    public function disablePagination()
+    {
+        $this->model->usePaginate(false);
+
+        $this->usePagination = false;
+
+        return $this;
+    }
+
+    /**
+     * If this grid use pagination.
+     *
+     * @return bool
+     */
+    public function usePagination()
+    {
+        return $this->usePagination;
+    }
+
+    /**
+     * Disable grid per-page selector.
+     */
+    public function disablePerPageSelector()
+    {
+        $this->usePerPageSelector = false;
+
+        return $this;
+    }
+
+    /**
+     * If this grid use per-page selector.
+     *
+     * @return bool
+     */
+    public function usePerPageSelector()
+    {
+        return $this->usePerPageSelector;
     }
 
     /**
@@ -521,7 +636,46 @@ class Grid
      */
     public function renderFilter()
     {
+        if (!$this->useFilter) {
+            return '';
+        }
+
         return $this->filter->render();
+    }
+
+    /**
+     * Set per-page options.
+     *
+     * @param array $perPages
+     */
+    public function perPages(array $perPages)
+    {
+        $this->perPages = $perPages;
+    }
+
+    /**
+     * Generate per-page options.
+     *
+     * @return string
+     */
+    public function perPageOptions()
+    {
+        $perPage = (int) app('request')->input(
+            $this->model->getPerPageName(),
+            $this->perPage
+        );
+
+        return collect($this->perPages)
+            ->push($this->perPage)
+            ->push($perPage)
+            ->unique()
+            ->sort()
+            ->map(function ($option) use ($perPage) {
+                $selected = ($option == $perPage) ? 'selected' : '';
+                $url = app('request')->fullUrlWithQuery([$this->model->getPerPageName() => $option]);
+
+                return "<option value=\"$url\" $selected>$option</option>";
+            })->implode("\r\n");
     }
 
     /**
@@ -702,6 +856,8 @@ class Grid
             return with(new Handle($e))->render();
         }
 
+        AdminManager::script($this->script());
+
         return view($this->view, $this->variables())->render();
     }
 
@@ -781,6 +937,10 @@ $('.grid-order-down').on('click', function() {
     grid_order($(this).data('id'), 0);
 });
 
+$('.per-page').select2({minimumResultsForSearch: -1}).on("select2:select", function(e) {
+    $.pjax({url: this.value, container: '#pjax-container'});
+});
+
 EOT;
     }
 
@@ -791,8 +951,6 @@ EOT;
      */
     public function __toString()
     {
-        AdminManager::script($this->script());
-
         return $this->render();
     }
 }

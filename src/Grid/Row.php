@@ -160,6 +160,7 @@ class Row
         $this->actions = new Action($actions);
 
         $this->actions->setRow($this);
+        $this->actions->setPath($this->path);
 
         return $this->actions;
     }
@@ -203,6 +204,7 @@ class Row
         }
 
         if (is_callable($value)) {
+            $value = $value->bindTo($this);
             $value = $value($this->column($name));
         }
 

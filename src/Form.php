@@ -12,7 +12,8 @@ use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Input;
-use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\MessageBag;
+use Illuminate\Validation\Validator;
 use Spatie\EloquentSortable\Sortable;
 
 /**
@@ -55,6 +56,7 @@ use Spatie\EloquentSortable\Sortable;
  * @method Field\Divide         divide()
  * @method Field\Password       password($column, $label = '')
  * @method Field\Decimal        decimal($column, $label = '')
+ * @method Field\Html           html($html)
  */
 class Form
 {
@@ -114,6 +116,13 @@ class Form
      * @var callable
      */
     protected $callable;
+
+    /**
+     * Allow delete item in form page.
+     *
+     * @var bool
+     */
+    protected $allowDeletion = true;
 
     /**
      * Available fields.
@@ -180,6 +189,20 @@ class Form
     public function builder()
     {
         return $this->builder;
+    }
+
+    /**
+     * Disable deletion in form page.
+     *
+     * @return $this
+     */
+    public function disableDeletion()
+    {
+        $this->builder->disableDeletion();
+
+        $this->allowDeletion = false;
+
+        return $this;
     }
 
     /**
@@ -264,8 +287,9 @@ class Form
     {
         $data = Input::all();
 
-        if (!$this->validate($data)) {
-            return back()->withInput()->withErrors($this->validator->messages());
+        // Handle validation errors.
+        if ($validationMessages = $this->validationMessages($data)) {
+            return back()->withInput()->withErrors($validationMessages);
         }
 
         $this->prepare($data, $this->saving);
@@ -403,8 +427,9 @@ class Form
             return response(['status' => true, 'message' => trans('admin::lang.succeeded')]);
         }
 
-        if (!$this->validate($data)) {
-            return back()->withInput()->withErrors($this->validator->messages());
+        // Handle validation errors.
+        if ($validationMessages = $this->validationMessages($data)) {
+            return back()->withInput()->withErrors($validationMessages);
         }
 
         $this->model = $this->model->with($this->getRelations())->findOrFail($id);
@@ -701,53 +726,47 @@ class Form
     }
 
     /**
-     * Validate input data.
+     * Get validation messages.
      *
-     * @param $input
+     * @param array $input
      *
-     * @return bool
+     * @return MessageBag|bool
      */
-    protected function validate($input)
+    protected function validationMessages($input)
     {
-        $data = $rules = [];
+        $failedValidators = [];
 
         foreach ($this->builder->fields() as $field) {
-            if (!method_exists($field, 'rules') || !$rule = $field->rules()) {
+            if (!$validator = $field->getValidator($input)) {
                 continue;
             }
 
-            $columns = $field->column();
-
-            if (is_string($columns)) {
-                if (!array_key_exists($columns, $input)) {
-                    continue;
-                }
-
-                $value = array_get($input, $columns);
-
-                // remove empty options from multiple select.
-                if ($field instanceof Field\MultipleSelect) {
-                    $value = array_filter($value);
-                }
-
-                $data[$field->label()] = $value;
-                $rules[$field->label()] = $rule;
-            }
-
-            if (is_array($columns)) {
-                foreach ($columns as $key => $column) {
-                    if (!array_key_exists($column, $input)) {
-                        continue;
-                    }
-                    $data[$field->label().$key] = array_get($input, $column);
-                    $rules[$field->label().$key] = $rule;
-                }
+            if (($validator instanceof Validator) && !$validator->passes()) {
+                $failedValidators[] = $validator;
             }
         }
 
-        $this->validator = Validator::make($data, $rules);
+        $message = $this->mergeValidationMessages($failedValidators);
 
-        return $this->validator->passes();
+        return $message->any() ? $message : false;
+    }
+
+    /**
+     * Merge validation messages from input validators.
+     *
+     * @param \Illuminate\Validation\Validator[] $validators
+     *
+     * @return MessageBag
+     */
+    protected function mergeValidationMessages($validators)
+    {
+        $messageBag = new MessageBag();
+
+        foreach ($validators as $validator) {
+            $messageBag = $messageBag->merge($validator->messages());
+        }
+
+        return $messageBag;
     }
 
     /**
@@ -880,6 +899,7 @@ class Form
             'timeRange'         => \Encore\Admin\Form\Field\TimeRange::class,
             'url'               => \Encore\Admin\Form\Field\Url::class,
             'year'              => \Encore\Admin\Form\Field\Year::class,
+            'html'              => \Encore\Admin\Form\Field\Html::class,
         ];
 
         foreach ($map as $abstract => $class) {

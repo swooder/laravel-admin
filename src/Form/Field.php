@@ -5,6 +5,7 @@ namespace Encore\Admin\Form;
 use Encore\Admin\Admin;
 use Encore\Admin\Form;
 use Illuminate\Contracts\Support\Arrayable;
+use Illuminate\Support\Facades\Validator;
 
 /**
  * Class Field.
@@ -117,6 +118,13 @@ class Field
      * @var string
      */
     protected $view = '';
+
+    /**
+     * Help block.
+     *
+     * @var array
+     */
+    protected $help = [];
 
     /**
      * Field constructor.
@@ -283,7 +291,7 @@ class Field
      *
      * @param null $rules
      *
-     * @return $this
+     * @return $this|array
      */
     public function rules($rules = null)
     {
@@ -296,6 +304,11 @@ class Field
         $this->rules = implode('|', $rules);
 
         return $this;
+    }
+
+    protected function getRules()
+    {
+        return $this->rules;
     }
 
     /**
@@ -312,6 +325,21 @@ class Field
         }
 
         $this->value = $value;
+
+        return $this;
+    }
+
+    /**
+     * Set help block for current field.
+     *
+     * @param string $text
+     * @param string $icon
+     *
+     * @return $this
+     */
+    public function help($text = '', $icon = 'fa-info-circle')
+    {
+        $this->help = compact('text', 'icon');
 
         return $this;
     }
@@ -344,6 +372,64 @@ class Field
     public function original()
     {
         return $this->original;
+    }
+
+    /**
+     * Get validator for this field.
+     *
+     * @param array $input
+     *
+     * @return bool|Validator
+     */
+    public function getValidator(array $input)
+    {
+        $rules = $attributes = [];
+
+        if (!$fieldRules = $this->getRules()) {
+            return false;
+        }
+
+        if (is_string($this->column)) {
+            if (!array_has($input, $this->column)) {
+                return false;
+            }
+
+            $input = $this->sanitizeInput($input, $this->column);
+
+            $rules[$this->column] = $fieldRules;
+            $attributes[$this->column] = $this->label;
+        }
+
+        if (is_array($this->column)) {
+            foreach ($this->column as $key => $column) {
+                if (!array_key_exists($column, $input)) {
+                    continue;
+                }
+                $input[$column.$key] = array_get($input, $column);
+                $rules[$column.$key] = $fieldRules;
+                $attributes[$column.$key] = $this->label."[$column]";
+            }
+        }
+
+        return Validator::make($input, $rules, [], $attributes);
+    }
+
+    /**
+     * Sanitize input data.
+     *
+     * @param array  $input
+     * @param string $column
+     *
+     * @return array
+     */
+    protected function sanitizeInput($input, $column)
+    {
+        if ($this instanceof Field\MultipleSelect) {
+            $value = array_get($input, $column);
+            array_set($input, $column, array_filter($value));
+        }
+
+        return $input;
     }
 
     /**
@@ -404,6 +490,7 @@ class Field
         $this->variables['label'] = $this->label;
         $this->variables['column'] = $this->column;
         $this->variables['attributes'] = $this->formatAttributes();
+        $this->variables['help'] = $this->help;
 
         return $this->variables;
     }

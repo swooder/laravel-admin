@@ -5,6 +5,7 @@ namespace Encore\Admin\Form\Field;
 use Encore\Admin\Form\Field;
 use Illuminate\Support\Facades\Input;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 
@@ -61,6 +62,20 @@ class File extends Field
     ];
 
     /**
+     * If use unique name to store upload file.
+     *
+     * @var bool
+     */
+    protected $useUniqueName = false;
+
+    /**
+     * Use multiple upload.
+     *
+     * @var bool
+     */
+    protected $multiple = false;
+
+    /**
      * Create a new File instance.
      *
      * @param string $column
@@ -113,6 +128,20 @@ class File extends Field
     }
 
     /**
+     * Set field as mulitple upload.
+     *
+     * @return $this
+     */
+    public function multiple()
+    {
+        $this->attribute('multiple', true);
+
+        $this->multiple = true;
+
+        return $this;
+    }
+
+    /**
      * Default store path for file upload.
      *
      * @return mixed
@@ -140,15 +169,85 @@ class File extends Field
     }
 
     /**
+     * {@inheritdoc}
+     */
+    public function getValidator(array $input)
+    {
+        $rules = $attributes = [];
+
+        if (!$fieldRules = $this->getRules()) {
+            return false;
+        }
+
+        if (!array_has($input, $this->column)) {
+            return false;
+        }
+
+        $rules[$this->column] = $fieldRules;
+        $attributes[$this->column] = $this->label;
+
+        if ($this->multiple) {
+            list($rules, $input) = $this->hydrateFiles(array_get($input, $this->column));
+        }
+
+        return Validator::make($input, $rules, [], $attributes);
+    }
+
+    /**
+     * Hydrate the files array.
+     *
+     * @param array $value
+     *
+     * @return array
+     */
+    protected function hydrateFiles(array $value)
+    {
+        $rules = $input = [];
+
+        foreach ($value as $key => $file) {
+            $rules[$this->column.$key] = $this->getRules();
+            $input[$this->column.$key] = $file;
+        }
+
+        return [$rules, $input];
+    }
+
+    /**
+     * Set name of store name.
+     *
+     * @param string|callable $name
+     *
+     * @return $this
+     */
+    public function name($name)
+    {
+        $this->name = $name;
+
+        return $this;
+    }
+
+    /**
+     * Use unique name for store upload file.
+     *
+     * @return $this
+     */
+    public function uniqueName()
+    {
+        $this->useUniqueName = true;
+
+        return $this;
+    }
+
+    /**
      * Prepare for saving.
      *
-     * @param UploadedFile $file
+     * @param UploadedFile|array $files
      *
      * @return mixed|string
      */
-    public function prepare(UploadedFile $file = null)
+    public function prepare($files)
     {
-        if (is_null($file)) {
+        if (is_null($files)) {
             if ($this->isDeleteRequest()) {
                 return '';
             }
@@ -156,11 +255,55 @@ class File extends Field
             return $this->original;
         }
 
+        if ($this->multiple || is_array($files)) {
+            $targets = array_map([$this, 'prepareForSingle'], $files);
+
+            return json_encode($targets);
+        }
+
+        return $this->prepareForSingle($files);
+    }
+
+    /**
+     * Prepare for single file.
+     *
+     * @param UploadedFile $file
+     *
+     * @return mixed|string
+     */
+    protected function prepareForSingle(UploadedFile $file = null)
+    {
         $this->directory = $this->directory ?: $this->defaultStorePath();
 
-        $this->name = $this->name ?: $file->getClientOriginalName();
+        $this->name = $this->getStoreName($file);
 
         return $this->uploadAndDeleteOriginal($file);
+    }
+
+    /**
+     * Get store name of upload file.
+     *
+     * @param UploadedFile $file
+     *
+     * @return string
+     */
+    protected function getStoreName(UploadedFile $file)
+    {
+        if ($this->useUniqueName) {
+            return $this->generateUniqueName($file);
+        }
+
+        if (is_callable($this->name)) {
+            $callback = $this->name->bindTo($this);
+
+            return call_user_func($callback, $file);
+        }
+
+        if (is_string($this->name)) {
+            return $this->name;
+        }
+
+        return $file->getClientOriginalName();
     }
 
     /**
@@ -186,11 +329,27 @@ class File extends Field
     /**
      * Preview html for file-upload plugin.
      *
-     * @return string
+     * @return array
      */
     protected function preview()
     {
-        $fileName = basename($this->value);
+        $files = json_decode($this->value, true);
+
+        if (!is_array($files)) {
+            $files = [$this->value];
+        }
+
+        return array_map([$this, 'buildPreviewItem'], $files);
+    }
+
+    /**
+     * Preview html for file-upload plugin.
+     *
+     * @return string
+     */
+    protected function buildPreviewItem($file)
+    {
+        $fileName = basename($file);
 
         return <<<EOT
 <div class="file-preview-other-frame">
@@ -221,13 +380,37 @@ EOT;
     }
 
     /**
+     * Initialize the caption.
+     *
+     * @param string $caption
+     *
+     * @return string
+     */
+    protected function initialCaption($caption)
+    {
+        if (empty($caption)) {
+            return '';
+        }
+
+        if ($this->multiple) {
+            $caption = json_decode($caption, true);
+        } else {
+            $caption = [$caption];
+        }
+
+        $caption = array_map('basename', $caption);
+
+        return implode(',', $caption);
+    }
+
+    /**
      * Render file upload field.
      *
      * @return \Illuminate\Contracts\View\Factory|\Illuminate\View\View
      */
     public function render()
     {
-        $this->options['initialCaption'] = basename($this->value);
+        $this->options['initialCaption'] = $this->initialCaption($this->value);
 
         if (!empty($this->value)) {
             $this->options['initialPreview'] = $this->preview();
@@ -245,7 +428,7 @@ $("#{$this->id}").on('filecleared', function(event) {
 
 EOT;
 
-        return parent::render();
+        return parent::render()->with(['multiple' => $this->multiple]);
     }
 
     /**
@@ -267,6 +450,18 @@ EOT;
     }
 
     /**
+     * Generate a unique name for uploaded file.
+     *
+     * @param UploadedFile $file
+     *
+     * @return string
+     */
+    protected function generateUniqueName(UploadedFile $file)
+    {
+        return md5(uniqid()).'.'.$file->guessExtension();
+    }
+
+    /**
      * If name already exists, rename it.
      *
      * @param $file
@@ -276,19 +471,35 @@ EOT;
     public function renameIfExists(UploadedFile $file)
     {
         if ($this->storage->exists("$this->directory/$this->name")) {
-            $this->name = md5(uniqid()).'.'.$file->guessExtension();
+            $this->name = $this->generateUniqueName($file);
         }
     }
 
     /**
-     * Destroy original file.
+     * Destroy original files.
      *
      * @return void.
      */
     public function destroy()
     {
-        if ($this->storage->exists($this->original)) {
-            $this->storage->delete($this->original);
+        $files = json_decode($this->original, true);
+
+        if (!is_array($files)) {
+            $files = [$this->original];
+        }
+
+        array_map([$this, 'destroyItem'], $files);
+    }
+
+    /**
+     * Destroy single original file.
+     *
+     * @param string $item
+     */
+    protected function destroyItem($item)
+    {
+        if ($this->storage->exists($item)) {
+            $this->storage->delete($item);
         }
     }
 }
