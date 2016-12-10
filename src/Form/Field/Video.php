@@ -15,26 +15,6 @@ class Video extends File
         return config('admin.upload.directory.video');
     }
 
-    public function prepare(UploadedFile $image = null)
-    {
-        if (is_null($image)) {
-            if ($this->isDeleteRequest()) {
-                return '';
-            }
-
-            return $this->original;
-        }
-
-        $this->directory = $this->directory ?: $this->defaultStorePath();
-
-        $this->name = $this->name ?: $image->getClientOriginalName();
-
-        $this->executeCalls($image->getRealPath());
-
-        $target = $this->uploadAndDeleteOriginal($image);
-
-        return $target;
-    }
 
     /**
      * @param $target
@@ -54,9 +34,9 @@ class Video extends File
         return $target;
     }
 
-    protected function preview()
+    protected function buildPreviewItem($image)
     {
-        return '<video src="'.$this->objectUrl($this->value).'" controls="controls" class="file-preview-video">';
+        return '<video src="'.$this->objectUrl($image).'" controls="controls" class="file-preview-video">';
     }
 
 
