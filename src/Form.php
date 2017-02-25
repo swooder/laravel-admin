@@ -41,6 +41,7 @@ use Symfony\Component\HttpFoundation\Response;
  * @method Field\Editor         editor($column, $label = '')
  * @method Field\File           file($column, $label = '')
  * @method Field\Image          image($column, $label = '')
+ * @method Field\Video          video($column, $label = '')
  * @method Field\Date           date($column, $label = '')
  * @method Field\Datetime       datetime($column, $label = '')
  * @method Field\Time           time($column, $label = '')
@@ -1097,6 +1098,7 @@ class Form
             'hidden'            => \Encore\Admin\Form\Field\Hidden::class,
             'id'                => \Encore\Admin\Form\Field\Id::class,
             'image'             => \Encore\Admin\Form\Field\Image::class,
+            'video'             => \Encore\Admin\Form\Field\Video::class,
             'ip'                => \Encore\Admin\Form\Field\Ip::class,
             'map'               => \Encore\Admin\Form\Field\Map::class,
             'mobile'            => \Encore\Admin\Form\Field\Mobile::class,

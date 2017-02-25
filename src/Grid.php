@@ -871,6 +871,7 @@ class Grid
             'switchGroup'   => \Encore\Admin\Grid\Displayers\SwitchGroup::class,
             'select'        => \Encore\Admin\Grid\Displayers\Select::class,
             'image'         => \Encore\Admin\Grid\Displayers\Image::class,
+            'video'         => \Encore\Admin\Grid\Displayers\Video::class,
             'label'         => \Encore\Admin\Grid\Displayers\Label::class,
             'button'        => \Encore\Admin\Grid\Displayers\Button::class,
             'link'          => \Encore\Admin\Grid\Displayers\Link::class,
